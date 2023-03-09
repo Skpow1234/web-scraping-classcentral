@@ -1,5 +1,5 @@
 import scrapy
-
+from googletrans import Translator
 
 class webScrapingSpider(scrapy.Spider):
     name = 'webScraping'
@@ -8,8 +8,14 @@ class webScrapingSpider(scrapy.Spider):
 
     def __init__(self, subject=None):
         self.subject = subject
-
+        self.translator = Translator(service_urls=['translate.google.com'])
+        
     def parse(self,response):
+                # Translate the response body to Hindi
+        response_text = response.text
+        translated_text = self.translator.translate(response_text, dest='hi').text
+        response = response.replace(body=translated_text)
+        
         subjects = response.css('.text-1.color-charcoal.weight-bold::text').extract()
         paths = response.xpath('//*[@class="border-box align-middle padding-right-xsmall"]/@href').extract()
         urls = ['https://classcentral.com' + path for path in paths] 
@@ -33,12 +39,12 @@ class webScrapingSpider(scrapy.Spider):
             duration = course.xpath('.//span[@class="hidden medium-up-inline-block small-down-text-2 text-3  large-up-margin-left-xxsmall  icon-clock-charcoal icon-left-small"]/text()').extract_first().strip().replace('          ','').replace('\n','')
             provider = course.xpath('.//a[@class="color-charcoal italic"]/text()').extract_first().replace('\n','').strip()
             yield{
-                'Subject':subject,
-                # 'Institution': institution,
-                'Course Name':course_name,
+                'Subject':self.translator.translate(subject, dest='hi').text,
+                'Institution': self.translator.translate(institution, dest='hi').text,
+                'Course Name':self.translator.translate(course_name, dest='hi').text,
                 'Course Url':course_url,
-                # 'Duration':duration,
-                # 'Provider':provider
+                'Duration':self.translator.translate(duration, dest='hi').text,
+                'Provider':self.translator.translate(provider, dest='hi').text
             }
         next_page = response.xpath('//link[@rel="next"]/@href').extract_first()
         if next_page:
